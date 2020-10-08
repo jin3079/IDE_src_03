@@ -11,8 +11,8 @@
 
 // global variables
 float timeout; // unit: us
-float i;
-float j;
+float ftn1;
+float ftn2;
 float dist_min, dist_max, dist_raw; // unit: mm
 unsigned long last_sampling_time; // unit: ms
 float scale; // used for pulse duration to distance conversion
@@ -25,8 +25,8 @@ void setup() {
   pinMode(PIN_ECHO,INPUT);
 
 // initialize USS related variables
-  i = 0.0;
-  j = 0.0;
+  ftn1 = 0.0;
+  ftn2 = 0.0;
   dist_min = _DIST_MIN; 
   dist_max = _DIST_MAX;
   timeout = (INTERVAL / 2) * 1000.0; // precalculate pulseIn() timeout value. (unit: us)
@@ -57,17 +57,17 @@ void loop() {
   Serial.print(PIN_LED);
 
 // turn on the LED if the distance is between dist_min and dist_max
-  i = 255-2.55*dist_raw;
-  j = 2.55*dist_raw;
+  ftn1 = 510-2.55*dist_raw;
+  ftn2 = 2.55*dist_raw-510;
   if(dist_raw < dist_min || dist_raw > dist_max) {
     analogWrite(PIN_LED, 255);
     }
   else {
     if(dist_raw>=100 && dist_raw<=200) {
-    analogWrite(PIN_LED, i);
+    analogWrite(PIN_LED, ftn1);
     }
     else {
-    analogWrite(PIN_LED, j);
+    analogWrite(PIN_LED, ftn2);
     }
   }
 
@@ -82,7 +82,7 @@ void loop() {
 float USS_measure(int TRIG, int ECHO)
 {
   float reading;
-  float i;
+  float skip_reading;
   float result_reading;
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
@@ -101,10 +101,10 @@ float USS_measure(int TRIG, int ECHO)
   //           = 100 * 173 milli*meter = 17,300 mm = 17.3m
   // pulseIn() returns microseconds.
   else {
-    i=reading;
-  if(i==0) {}
+    skip_reading=reading;
+  if(skip_reading==0) {}  // skip
   else{
-    result_reading=i;
+    result_reading=skip_reading;  // not skip
     }
   }
   return result_reading;
