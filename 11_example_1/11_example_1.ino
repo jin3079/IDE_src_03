@@ -11,6 +11,7 @@
 #define INTERVAL 25 // sampling interval (unit: ms)
 #define _DIST_MIN 100 // minimum distance to be measured (unit: mm)
 #define _DIST_MAX 400 // maximum distance to be measured (unit: mm)
+#define _DIST_ALPHA 0.1
 
 #define _DUTY_MIN 553 // servo full clockwise position (0 degree)
 #define _DUTY_NEU 1476 // servo neutral position (90 degree)
@@ -19,7 +20,7 @@
 // global variables
 float timeout; // unit: us
 float ftn;
-float dist_min, dist_max, dist_raw, dist_prev; // unit: mm
+float dist_min, dist_max, dist_raw, dist_prev, dist_ema, alpha; // unit: mm
 unsigned long last_sampling_time; // unit: ms
 float scale; // used for pulse duration to distance conversion
 Servo myservo;
@@ -38,6 +39,7 @@ void setup() {
 // initialize USS related variables
   dist_min = _DIST_MIN; 
   dist_max = _DIST_MAX;
+  alpha = _DIST_ALPHA;
   ftn = 0;
   timeout = (INTERVAL / 2) * 1000.0; // precalculate pulseIn() timeout value. (unit: us)
   dist_raw = dist_prev = 0.0; // raw distance output from USS (unit: mm)
@@ -57,6 +59,7 @@ void loop() {
 
 // get a distance reading from the USS
   dist_raw = USS_measure(PIN_TRIG,PIN_ECHO);
+  dist_ema = dist_raw*alpha + (1-alpha)*dist_raw;
 
 // output the read value to the serial port
 //  Serial.print("Min:100,Low:180,raw:");
@@ -70,8 +73,8 @@ void loop() {
   Serial.print("Min:100,raw:");
   Serial.print(dist_raw);
   Serial.print(".");
-//  Serial.print(",ema:");
-//  Serial.print(dist_ema);
+  Serial.print(",ema:");
+  Serial.print(dist_ema);
   Serial.print(",servo:");
   Serial.print(myservo.read());
   Serial.println(",Max:400");
@@ -111,7 +114,7 @@ float USS_measure(int TRIG, int ECHO)
   digitalWrite(TRIG, LOW);
 
   reading = pulseIn(ECHO, HIGH, timeout) * scale; // unit: mm
-  if(reading <= 180.0 || reading >= 360.0) reading = 0.0; // return 0 when out of range.
+  if(reading < dist_min || reading > dist_max) reading = 0.0; // return 0 when out of range.
 
   if(reading == 0.0) reading = dist_prev;
   else dist_prev = reading;
